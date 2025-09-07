@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Fake News Detection System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-top: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stats-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-weight: 600;
+            color: #34495e;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .stat-value.real {
+            color: #27ae60;
+        }
+
+        .stat-value.fake {
+            color: #e74c3c;
+        }
+
+        .stat-value.total {
+            color: #3498db;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2980b9, #21618c);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #229954, #1e8449);
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+            transform: translateY(-2px);
+        }
+
+        .status {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .status.running {
+            background: #d5f4e6;
+            color: #27ae60;
+            border-left: 4px solid #27ae60;
+        }
+
+        .status.stopped {
+            background: #fadbd8;
+            color: #e74c3c;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .news-feed {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .feed-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 1.5rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .feed-content {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .news-item {
+            padding: 1.5rem;
+            border-bottom: 1px solid #ecf0f1;
+            transition: background-color 0.3s ease;
+        }
+
+        .news-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .news-item:last-child {
+            border-bottom: none;
+        }
+
+        .news-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .news-title {
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 1.1rem;
+            line-height: 1.4;
+            flex: 1;
+            margin-right: 1rem;
+        }
+
+        .prediction-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .prediction-badge.real {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+
+        .prediction-badge.fake {
+            background: #fadbd8;
+            color: #e74c3c;
+        }
+
+        .news-meta {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+
+        .news-source {
+            font-weight: 600;
+        }
+
+        .confidence-score {
+            background: #ecf0f1;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .news-preview {
+            color: #5a6c7d;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .analysis-section {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .analysis-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .analysis-text {
+            color: #5a6c7d;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #7f8c8d;
+        }
+
+        .spinner {
+            border: 4px solid #ecf0f1;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .input-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-buttons {
+                flex-direction: column;
+            }
+            
+            .news-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .prediction-badge {
+                margin-top: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛡️ Real-Time Fake News Detection System</h1>
+        <p class="subtitle">AI-Powered News Analysis with Gemini Integration</p>
+    </div>
+
+    <div class="container">
+        <!-- Dashboard Stats -->
+        <div class="dashboard">
+            <div class="stats-card">
+                <h3 style="margin-bottom: 1rem; color: #2c3e50;">📊 Analysis Statistics</h3>
+                <div class="stat-item">
+                    <span class="stat-label">Total Articles Analyzed</span>
+                    <span class="stat-value total" id="totalArticles">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Real News Detected</span>
+                    <span class="stat-value real" id="realNews">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Fake News Detected</span>
+                    <span class="stat-value fake" id="fakeNews">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Average Confidence</span>
+                    <span class="stat-value" id="avgConfidence">0%</span>
+                </div>
+            </div>
+
+            <div class="stats-card">
+                <h3 style="margin-bottom: 1rem; color: #2c3e50;">⚡ System Status</h3>
+                <div class="stat-item">
+                    <span class="stat-label">System Status</span>
+                    <span class="stat-value" id="systemStatus">Stopped</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Last Update</span>
+                    <span class="stat-value" id="lastUpdate">Never</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Articles Per Hour</span>
+                    <span class="stat-value" id="articlesPerHour">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Gemini API Status</span>
+                    <span class="stat-value real" id="geminiStatus">Ready</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <h3 style="margin-bottom: 1rem; color: #2c3e50;">🎛️ Control Panel</h3>
+            <div class="control-buttons">
+                <button class="btn btn-success" onclick="startMonitoring()">▶️ Start Monitoring</button>
+                <button class="btn btn-danger" onclick="stopMonitoring()">⏹️ Stop Monitoring</button>
+                <button class="btn btn-warning" onclick="fetchSingleBatch()">🔄 Fetch Single Batch</button>
+                <button class="btn btn-primary" onclick="clearData()">🗑️ Clear Data</button>
+            </div>
+            <div id="systemStatusDisplay" class="status stopped">
+                🔴 System Stopped - Click "Start Monitoring" to begin real-time analysis
+            </div>
+        </div>
+
+        <!-- Manual Article Testing -->
+        <div class="input-section">
+            <h3 style="margin-bottom: 1rem; color: #2c3e50;">🧪 Test Custom Article</h3>
+            <div class="input-group">
+                <label class="input-label" for="customTitle">Article Title:</label>
+                <input type="text" id="customTitle" class="input-field" placeholder="Enter article title...">
+            </div>
+            <div class="input-group">
+                <label class="input-label" for="customContent">Article Content:</label>
+                <textarea id="customContent" class="input-field textarea" placeholder="Enter article content..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="testCustomArticle()">🔍 Analyze Article</button>
+        </div>
+
+        <!-- Chart -->
+        <div class="chart-container">
+            <h3 style="margin-bottom: 1rem; color: #2c3e50;">📈 Real-Time Analysis Trends</h3>
+            <canvas id="analysisChart" width="400" height="150"></canvas>
+        </div>
+
+        <!-- News Feed -->
+        <div class="news-feed">
+            <div class="feed-header">
+                📰 Live News Analysis Feed
+            </div>
+            <div class="feed-content" id="newsFeed">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Ready to analyze news articles...</p>
+                    <p>Click "Start Monitoring" to begin real-time analysis</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let isMonitoring = false;
+        let monitoringInterval;
+        let analysisData = [];
+        let chart;
+        let stats = {
+            total: 0,
+            real: 0,
+            fake: 0,
+            confidenceSum: 0
+        };
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('analysisChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Real News',
+                            data: [],
+                            borderColor: '#27ae60',
+                            backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Fake News',
+                            data: [],
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Simulate backend connection (replace with actual backend calls)
+        function simulateNewsAnalysis() {
+            // This would be replaced with actual backend API calls
+            const sampleArticles = [
+                {
+                    title: "Breaking: Revolutionary Medical Breakthrough Changes Everything",
+                    content: "Scientists at a major university have discovered a revolutionary treatment...",
+                    source: "NewsAPI-Science Daily",
+                    prediction: "Real",
+                    confidence: 85,
+                    geminiScore: 80,
+                    analysis: "The article presents factual information about medical research with appropriate scientific language.",
+                    url: "#"
+                },
+                {
+                    title: "SHOCKING: This One Weird Trick Will Make You Rich Overnight!",
+                    content: "You won't believe this incredible secret that banks don't want you to know...",
+                    source: "NewsAPI-ClickBait Central",
+                    prediction: "Fake",
+                    confidence: 95,
+                    geminiScore: 15,
+                    analysis: "Contains multiple red flags including sensational language, unrealistic claims, and lack of credible sources.",
+                    url: "#"
+                },
+                {
+                    title: "Federal Reserve Adjusts Interest Rates Following Economic Review",
+                    content: "The Federal Reserve announced a decision to adjust interest rates...",
+                    source: "Reuters",
+                    prediction: "Real",
+                    confidence: 92,
+                    geminiScore: 90,
+                    analysis: "Straightforward reporting of verifiable economic news from a credible source.",
+                    url: "#"
+                }
+            ];
+
+            // Randomly select an article
+            const article = sampleArticles[Math.floor(Math.random() * sampleArticles.length)];
+            
+            // Add some randomization to make it more realistic
+            article.confidence += Math.floor(Math.random() * 10) - 5;
+            article.geminiScore += Math.floor(Math.random() * 10) - 5;
+            
+            return article;
+        }
+
+        // Start monitoring
+        function startMonitoring() {
+            if (isMonitoring) return;
+            
+            isMonitoring = true;
+            document.getElementById('systemStatus').textContent = 'Running';
+            document.getElementById('systemStatus').className = 'stat-value real';
+            document.getElementById('systemStatusDisplay').innerHTML = '🟢 System Running - Analyzing news in real-time';
+            document.getElementById('systemStatusDisplay').className = 'status running';
+
+            // Simulate fetching news every 10 seconds
+            monitoringInterval = setInterval(() => {
+                fetchAndAnalyzeNews();
+            }, 10000);
+
+            // Fetch first batch immediately
+            fetchAndAnalyzeNews();
+        }
+
+        // Stop monitoring
+        function stopMonitoring() {
+            if (!isMonitoring) return;
+            
+            isMonitoring = false;
+            clearInterval(monitoringInterval);
+            
+            document.getElementById('systemStatus').textContent = 'Stopped';
+            document.getElementById('systemStatus').className = 'stat-value fake';
+            document.getElementById('systemStatusDisplay').innerHTML = '🔴 System Stopped - Click "Start Monitoring" to begin real-time analysis';
+            document.getElementById('systemStatusDisplay').className = 'status stopped';
+        }
+
+        // Fetch single batch
+        function fetchSingleBatch() {
+            fetchAndAnalyzeNews();
+        }
+
+        // Fetch and analyze news
+        function fetchAndAnalyzeNews() {
+            // Simulate multiple articles in a batch
+            const batchSize = Math.floor(Math.random() * 3) + 1;
+            
+            for (let i = 0; i < batchSize; i++) {
+                setTimeout(() => {
+                    const article = simulateNewsAnalysis();
+                    addNewsItem(article);
+                    updateStats(article);
+                    updateChart();
+                }, i * 2000); // Stagger the articles
+            }
+
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Add news item to feed
+        function addNewsItem(article) {
+            const feed = document.getElementById('newsFeed');
+            
+            // Remove loading message if it exists
+            if (feed.querySelector('.loading')) {
+                feed.innerHTML = '';
+            }
+
+            const newsItem = document.createElement('div');
+            newsItem.className = 'news-item';
+            newsItem.innerHTML = `
+                <div class="news-header">
+                    <div class="news-title">${article.title}</div>
+                    <div class="prediction-badge ${article.prediction.toLowerCase()}">${article.prediction}</div>
+                </div>
+                <div class="news-meta">
+                    <span class="news-source">📰 ${article.source}</span>
+                    <span class="confidence-score">🎯 ML: ${article.confidence}%</span>
+                    <span class="confidence-score">🤖 Gemini: ${article.geminiScore}/100</span>
+                    <span>${new Date().toLocaleTimeString()}</span>
+                </div>
+                <div class="news-preview">${article.content}</div>
+                <div class="analysis-section">
+                    <div class="analysis-title">🧠 AI Analysis:</div>
+                    <div class="analysis-text">${article.analysis}</div>
+                </div>
+            `;
+
+            feed.insertBefore(newsItem, feed.firstChild);
+
+            // Keep only last 20 items
+            while (feed.children.length > 20) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        // Update statistics
+        function updateStats(article) {
+            stats.total++;
+            if (article.prediction === 'Real') {
+                stats.real++;
+            } else {
+                stats.fake++;
+            }
+            stats.confidenceSum += article.confidence;
+
+            document.getElementById('totalArticles').textContent = stats.total;
+            document.getElementById('realNews').textContent = stats.real;
+            document.getElementById('fakeNews').textContent = stats.fake;
+            document.getElementById('avgConfidence').textContent = Math.round(stats.confidenceSum / stats.total) + '%';
+
+            // Calculate articles per hour (simplified)
+            const hoursRunning = Math.max(1, stats.total / 10); // Approximate
+            document.getElementById('articlesPerHour').textContent = Math.round(stats.total / hoursRunning);
+        }
+
+        // Update chart
+        function updateChart() {
+            const now = new Date().toLocaleTimeString();
+            
+            if (chart.data.labels.length >= 10) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+                chart.data.datasets[1].data.shift();
+            }
+
+            chart.data.labels.push(now);
+            chart.data.datasets[0].data.push(stats.real);
+            chart.data.datasets[1].data.push(stats.fake);
+            
+            chart.update();
+        }
+
+        // Clear data
+        function clearData() {
+            stats = { total: 0, real: 0, fake: 0, confidenceSum: 0 };
+            analysisData = [];
+            
+            document.getElementById('totalArticles').textContent = '0';
+            document.getElementById('realNews').textContent = '0';
+            document.getElementById('fakeNews').textContent = '0';
+            document.getElementById('avgConfidence').textContent = '0%';
+            document.getElementById('articlesPerHour').textContent = '0';
+            
+            document.getElementById('newsFeed').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Ready to analyze news articles...</p>
+                    <p>Click "Start Monitoring" to begin real-time analysis</p>
+                </div>
+            `;
+
+            // Clear chart
+            chart.data.labels = [];
+            chart.data.datasets[0].data = [];
+            chart.data.datasets[1].data = [];
+            chart.update();
+        }
+
+        // Test custom article
+        function testCustomArticle() {
+            const title = document.getElementById('customTitle').value.trim();
+            const content = document.getElementById('customContent').value.trim();
+
+            if (!title || !content) {
+                alert('Please enter both title and content');
+                return;
+            }
+
+            // Simulate analysis of custom article
+            const isFake = title.toLowerCase().includes('shocking') || 
+                          title.toLowerCase().includes('incredible') ||
+                          content.toLowerCase().includes('secret') ||
+                          content.toLowerCase().includes('amazing');
+
+            const article = {
+                title: title,
+                content: content.substring(0, 200) + (content.length > 200 ? '...' : ''),
+                source: 'User Input',
+                prediction: isFake ? 'Fake' : 'Real',
+                confidence: isFake ? Math.floor(Math.random() * 30) + 70 : Math.floor(Math.random() * 20) + 80,
+                geminiScore: isFake ? Math.floor(Math.random() * 40) + 10 : Math.floor(Math.random() * 30) + 70,
+                analysis: isFake ? 
+                    'The article contains sensational language and unsubstantiated claims typical of fake news.' :
+                    'The article appears to be written in a factual, professional manner with credible content.',
+                url: '#'
+            };
+
+            addNewsItem(article);
+            updateStats(article);
+            updateChart();
+
+            // Clear inputs
+            document.getElementById('customTitle').value = '';
+            document.getElementById('customContent').value = '';
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+        });
+    </script>
+</body>
+</html>
